@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Casino Chip Tabelle</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+
+  <div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">Casino Chip Tabelle</h1>
+
+    <!-- Datei-Upload -->
+    <div class="mb-4">
+      <label class="block font-medium mb-1">CSV-Datei laden:</label>
+      <input type="file" id="csvInput" accept=".csv" class="border p-2 rounded w-full" />
+    </div>
+
+    <!-- Formular -->
+    <form id="chipForm" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <input type="date" name="datum" required class="border p-2 rounded" />
+      <input type="text" name="klasse" placeholder="Klasse" required class="border p-2 rounded" />
+      <input type="text" name="name" placeholder="Name" required class="border p-2 rounded" />
+
+      <input type="number" name="weiss" placeholder="Weiß" min="0" class="border p-2 rounded" />
+      <input type="number" name="rot" placeholder="Rot" min="0" class="border p-2 rounded" />
+      <input type="number" name="gruen" placeholder="Grün" min="0" class="border p-2 rounded" />
+      <input type="number" name="blau" placeholder="Blau" min="0" class="border p-2 rounded" />
+      <input type="number" name="schwarz" placeholder="Schwarz" min="0" class="border p-2 rounded" />
+
+      <button type="submit" class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 md:col-span-3">
+        Eintrag hinzufügen
+      </button>
+    </form>
+
+    <div class="flex flex-wrap gap-4 mb-4">
+      <button id="downloadBtn" class="bg-green-500 text-white p-2 rounded hover:bg-green-600">
+        CSV herunterladen
+      </button>
+      <button id="clearBtn" class="bg-red-500 text-white p-2 rounded hover:bg-red-600">
+        Tabelle leeren
+      </button>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full table-auto border border-gray-300 text-sm">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border p-2">Datum</th>
+            <th class="border p-2">Klasse</th>
+            <th class="border p-2">Name</th>
+            <th class="border p-2">Weiß</th>
+            <th class="border p-2">Rot</th>
+            <th class="border p-2">Grün</th>
+            <th class="border p-2">Blau</th>
+            <th class="border p-2">Schwarz</th>
+          </tr>
+        </thead>
+        <tbody id="chipTableBody" class="text-center"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("chipForm");
+    const tableBody = document.getElementById("chipTableBody");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const csvInput = document.getElementById("csvInput");
+
+    let eintraege = [];
+
+    function renderTable() {
+      tableBody.innerHTML = "";
+      eintraege.forEach(e => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="border p-2">${e.datum}</td>
+          <td class="border p-2">${e.klasse}</td>
+          <td class="border p-2">${e.name}</td>
+          <td class="border p-2">${e.weiss}</td>
+          <td class="border p-2">${e.rot}</td>
+          <td class="border p-2">${e.gruen}</td>
+          <td class="border p-2">${e.blau}</td>
+          <td class="border p-2">${e.schwarz}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const eintrag = {
+        datum: formData.get("datum"),
+        klasse: formData.get("klasse"),
+        name: formData.get("name"),
+        weiss: formData.get("weiss") || 0,
+        rot: formData.get("rot") || 0,
+        gruen: formData.get("gruen") || 0,
+        blau: formData.get("blau") || 0,
+        schwarz: formData.get("schwarz") || 0
+      };
+      eintraege.push(eintrag);
+      renderTable();
+      form.reset();
+    });
+
+    downloadBtn.addEventListener("click", function () {
+      if (eintraege.length === 0) {
+        alert("Keine Einträge zum Herunterladen.");
+        return;
+      }
+      let csvContent = "Datum,Klasse,Name,Weiß,Rot,Grün,Blau,Schwarz\n";
+      eintraege.forEach(e => {
+        csvContent += `${e.datum},${e.klasse},${e.name},${e.weiss},${e.rot},${e.gruen},${e.blau},${e.schwarz}\n`;
+      });
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "casino_chip_tabelle.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    clearBtn.addEventListener("click", function () {
+      if (confirm("Willst du wirklich alle Einträge löschen?")) {
+        eintraege = [];
+        renderTable();
+      }
+    });
+
+    csvInput.addEventListener("change", function (e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const text = event.target.result;
+        const lines = text.trim().split("\n");
+        const headers = lines[0].split(",");
+        eintraege = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(",");
+          if (values.length >= 8) {
+            eintraege.push({
+              datum: values[0],
+              klasse: values[1],
+              name: values[2],
+              weiss: values[3],
+              rot: values[4],
+              gruen: values[5],
+              blau: values[6],
+              schwarz: values[7],
+            });
+          }
+        }
+        renderTable();
+      };
+      reader.readAsText(file);
+    });
+  </script>
+
+</body>
+</html>
